@@ -25,15 +25,15 @@ export const RSS_SOURCES: FeedSource[] = [
     domain: 'theverge.com'
   },
   {
-    id: 'venturebeat-ai',
-    name: 'VentureBeat AI',
-    url: 'https://venturebeat.com/category/ai/feed/',
+    id: 'mit-tech-review',
+    name: 'MIT Technology Review',
+    url: 'https://www.technologyreview.com/feed/',
     topicId: 'ai-agents',
     category: 'RESEARCH',
     type: 'Articles',
     badgeText: 'Live Feed',
-    avatarBg: 'bg-blue-600',
-    domain: 'venturebeat.com'
+    avatarBg: 'bg-rose-600',
+    domain: 'technologyreview.com'
   },
   {
     id: 'arstechnica',
@@ -60,7 +60,7 @@ export const RSS_SOURCES: FeedSource[] = [
   {
     id: 'hackernews',
     name: 'Hacker News Frontpage',
-    url: 'https://news.ycombinator.com/rss',
+    url: 'https://hnrss.org/frontpage',
     topicId: 'cloud-infra',
     category: 'STARTUP',
     type: 'News',
