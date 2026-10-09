@@ -8,9 +8,12 @@ import {
   Check, 
   ChevronRight, 
   HelpCircle, 
-  FileCheck2
+  FileCheck2,
+  RefreshCw,
+  BookmarkPlus
 } from 'lucide-react';
 import { KEY_FINDINGS, RELATED_QUESTIONS } from '../data/mockData';
+import { useApp } from '../context/AppContext';
 import confetti from 'canvas-confetti';
 
 interface AIInsightsPanelProps {
@@ -22,6 +25,16 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
   onQuestionClick,
   selectedTopicLabel
 }) => {
+  const {
+    searchQuery,
+    selectedTopicId,
+    activeResearchResult,
+    isResearching,
+    runDeepAIResearch,
+    addResearchNote,
+    showToast
+  } = useApp();
+
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeFrequency, setActiveFrequency] = useState<'daily' | 'weekly'>('daily');
   const [expandedFinding, setExpandedFinding] = useState<string | null>('01');
@@ -37,6 +50,28 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
       });
     }
   };
+
+  const handleTriggerSynthesis = async () => {
+    const targetQuery = searchQuery || (selectedTopicLabel ? `${selectedTopicLabel} Market Trends` : 'Emerging AI Agents & Market Intelligence');
+    await runDeepAIResearch(targetQuery, {
+      topicId: selectedTopicId || 'ai-agents',
+      depth: 'deep'
+    });
+  };
+
+  const handleSaveToNotes = () => {
+    if (!activeResearchResult) return;
+    addResearchNote({
+      title: `AI Research: ${activeResearchResult.query}`,
+      content: `${activeResearchResult.executiveSummary}\n\nKey Findings:\n${activeResearchResult.keyFindings.map(f => `- ${f.title}: ${f.summary}`).join('\n')}\n\nStrategic Takeaways:\n${activeResearchResult.strategicTakeaways.join('\n')}`,
+      tags: ['Claude 3.5', 'Research Synthesis', selectedTopicLabel || 'AI']
+    });
+    showToast('Saved research report to Library Notes');
+  };
+
+  const findingsToDisplay = activeResearchResult?.keyFindings?.length 
+    ? activeResearchResult.keyFindings 
+    : KEY_FINDINGS;
 
   return (
     <aside className="w-full space-y-4 text-left">
@@ -55,28 +90,55 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
                 AI Synthesis Overview
               </span>
               <span className="text-[10px] text-slate-400 font-mono">
-                ContentHu Core v4.2
+                {activeResearchResult?.model || 'Claude 3.5 Sonnet Engine'}
               </span>
             </div>
           </div>
 
-          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live Model
-          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleTriggerSynthesis}
+              disabled={isResearching}
+              className="px-2 py-1 rounded-lg text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 flex items-center gap-1 transition-all"
+              title="Run live Claude AI synthesis for current topic/search"
+            >
+              <RefreshCw className={`w-3 h-3 ${isResearching ? 'animate-spin' : ''}`} />
+              <span>{isResearching ? 'Synthesizing...' : 'Run Claude AI'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Synthesis Body */}
         <div>
           <h3 className="text-[13.5px] font-bold text-slate-900 mb-2 leading-snug">
-            {selectedTopicLabel 
-              ? `Strategic Intelligence: ${selectedTopicLabel}` 
-              : 'AI Agent Ecosystem in Indian Startups: 2026 Intelligence Brief'}
+            {activeResearchResult
+              ? `Strategic Intelligence: ${activeResearchResult.query}`
+              : selectedTopicLabel 
+                ? `Strategic Intelligence: ${selectedTopicLabel}` 
+                : 'AI Agent Ecosystem in Indian Startups: 2026 Intelligence Brief'}
           </h3>
           <p className="text-[12px] text-slate-600 leading-relaxed">
-            India&apos;s generative AI and autonomous agent landscape is experiencing exponential acceleration, pivoting from conversational chatbots to autonomous workflow agents across enterprise SaaS, vernacular voice interfaces, and developer infrastructure.
+            {activeResearchResult?.executiveSummary || 
+              "India's generative AI and autonomous agent landscape is experiencing exponential acceleration, pivoting from conversational chatbots to autonomous workflow agents across enterprise SaaS, vernacular voice interfaces, and developer infrastructure."}
           </p>
         </div>
+
+        {/* Action strip when result is active */}
+        {activeResearchResult && (
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[10px] font-mono text-emerald-600 font-semibold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Ingested Context Included
+            </span>
+            <button
+              onClick={handleSaveToNotes}
+              className="text-[10px] font-bold text-slate-600 hover:text-indigo-600 flex items-center gap-1"
+            >
+              <BookmarkPlus className="w-3 h-3 text-indigo-500" />
+              Save to Notes
+            </button>
+          </div>
+        )}
 
         {/* 4 Research Statistics Grid */}
         <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100">
@@ -86,37 +148,37 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
               <span>Sources</span>
             </div>
             <div className="text-sm font-bold text-slate-900 font-mono">
-              142 <span className="text-[10px] text-emerald-600 font-sans font-medium">+18% wk</span>
+              {activeResearchResult ? `${activeResearchResult.sourcesReferenced.length || 14} live` : '142'} <span className="text-[10px] text-emerald-600 font-sans font-medium">+18% wk</span>
             </div>
           </div>
 
           <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
             <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-0.5">
               <Layers className="w-3 h-3 text-violet-500" />
-              <span>Key Themes</span>
+              <span>Maturity</span>
             </div>
             <div className="text-sm font-bold text-slate-900 font-mono">
-              18 <span className="text-[10px] text-slate-400 font-sans font-normal">clusters</span>
+              {activeResearchResult?.marketDynamics.marketMaturity || 'Accelerating'}
             </div>
           </div>
 
           <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
             <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-0.5">
               <Building2 className="w-3 h-3 text-blue-500" />
-              <span>Companies</span>
+              <span>Momentum</span>
             </div>
             <div className="text-sm font-bold text-slate-900 font-mono">
-              54 <span className="text-[10px] text-slate-400 font-sans font-normal">tracked</span>
+              {activeResearchResult?.marketDynamics.momentumScore || 92}/100
             </div>
           </div>
 
           <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
             <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-0.5">
               <Scale className="w-3 h-3 text-amber-500" />
-              <span>Viewpoints</span>
+              <span>Key Findings</span>
             </div>
             <div className="text-sm font-bold text-slate-900 font-mono">
-              12 <span className="text-[10px] text-slate-400 font-sans font-normal">contrasting</span>
+              {findingsToDisplay.length} <span className="text-[10px] text-slate-400 font-sans font-normal">verified</span>
             </div>
           </div>
         </div>
@@ -128,15 +190,15 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-indigo-600" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              Key Strategic Findings (5)
+              Key Strategic Findings ({findingsToDisplay.length})
             </h3>
           </div>
           <span className="text-[10px] font-mono text-slate-400">Synthesized</span>
         </div>
 
-        {/* 5 Numbered Findings */}
+        {/* Numbered Findings */}
         <div className="space-y-2.5">
-          {KEY_FINDINGS.map((finding) => {
+          {findingsToDisplay.map((finding) => {
             const isExpanded = expandedFinding === finding.number;
             return (
               <div
@@ -166,7 +228,9 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
                     </p>
 
                     <div className="mt-2 flex items-center justify-between text-[10px]">
-                      <span className={`px-1.5 py-0.2 rounded font-semibold border ${finding.impactColor}`}>
+                      <span className={`px-1.5 py-0.2 rounded font-semibold border ${
+                        finding.impactColor?.includes('bg-') ? finding.impactColor : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      }`}>
                         {finding.impactTag}
                       </span>
                       <span className="text-slate-400 font-mono">
@@ -187,14 +251,19 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
           <div className="flex items-center gap-2">
             <HelpCircle className="w-3.5 h-3.5 text-indigo-600" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              Related Research Questions
+              Related Research Inquiries
             </h3>
           </div>
-          <span className="text-[10px] text-indigo-600 font-semibold cursor-pointer">5 questions</span>
+          <span className="text-[10px] text-indigo-600 font-semibold cursor-pointer">
+            {activeResearchResult?.relatedQuestions?.length || RELATED_QUESTIONS.length} inquiries
+          </span>
         </div>
 
         <div className="space-y-1.5">
-          {RELATED_QUESTIONS.map((q) => (
+          {(activeResearchResult?.relatedQuestions && activeResearchResult.relatedQuestions.length > 0
+            ? activeResearchResult.relatedQuestions.map((q, idx) => ({ id: `dyn-${idx}`, query: q }))
+            : RELATED_QUESTIONS
+          ).map((q) => (
             <button
               key={q.id}
               onClick={() => onQuestionClick(q.query)}
@@ -231,7 +300,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
         </div>
 
         <p className="text-[11px] text-slate-300 leading-relaxed mb-3">
-          Get real-time updates when new breakthrough models, venture funding rounds, or policy changes occur.
+          Get real-time updates when new breakthrough models, venture funding rounds, or live RSS news occur.
         </p>
 
         {/* Frequency selector */}

@@ -8,7 +8,9 @@ import {
   SlidersHorizontal, 
   ArrowRight, 
   ChevronDown, 
-  Menu
+  Menu,
+  RefreshCw,
+  Radio
 } from 'lucide-react';
 import { FILTER_CHIPS, SUGGESTED_QUERIES } from '../data/mockData';
 import { useApp } from '../context/AppContext';
@@ -26,7 +28,11 @@ export const SearchHeader: React.FC = () => {
     markNotificationAsRead,
     markAllNotificationsAsRead,
     navigateToQuestionSearch,
-    showToast
+    showToast,
+    refreshLiveFeeds,
+    isSyncingFeeds,
+    lastFeedSyncTime,
+    isBackendOnline
   } = useApp();
 
   const [localQuery, setLocalQuery] = useState(searchQuery);
@@ -98,57 +104,62 @@ export const SearchHeader: React.FC = () => {
         <form 
           ref={searchRef}
           onSubmit={handleSearchSubmit}
-          className="flex-1 relative flex items-center group"
+          className="relative flex-1 group"
         >
-          <div className="relative flex-1 flex items-center">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 group-focus-within:text-indigo-600 transition-colors pointer-events-none" />
+          <div className="relative flex items-center">
+            <div className="absolute left-3.5 text-slate-400 pointer-events-none group-focus-within:text-indigo-600 transition-colors">
+              <Search className="w-4 h-4" />
+            </div>
+
             <input
               type="text"
               value={localQuery}
               onChange={(e) => setLocalQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
-              placeholder="Discover articles, topics, sovereign models, startups..."
-              className="w-full pl-10 pr-24 py-2.5 bg-white border border-slate-200/90 rounded-xl text-slate-800 text-[13.5px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 shadow-xs transition-all duration-200 font-medium"
+              placeholder="Search live feeds, AI papers, founders, startups, trends..."
+              className="w-full pl-10 pr-24 py-2.5 bg-white border border-slate-200/90 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-xs transition-all duration-200"
             />
-            
+
             <div className="absolute right-2.5 flex items-center gap-1.5">
               {localQuery && (
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                  title="Clear search"
+                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
-              
+
               <button
                 type="submit"
-                className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-all duration-150"
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-[11px] font-semibold text-slate-600 hover:text-indigo-600 transition-colors"
               >
                 <span>Search</span>
-                <ArrowRight className="w-3 h-3" />
+                <kbd className="text-[10px] font-mono text-slate-400 bg-white px-1 py-0.5 rounded border border-slate-200 shadow-2xs">↵</kbd>
               </button>
             </div>
           </div>
 
-          {/* Autocomplete & Suggestions Dropdown */}
+          {/* Quick Suggestions Dropdown on Focus */}
           {isSearchFocused && (
-            <div className="absolute top-full left-0 right-0 mt-2 p-3 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 text-left animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute top-full left-0 right-0 mt-2 p-3 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-50 text-left animate-in fade-in zoom-in-95 duration-150">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-2 flex items-center justify-between">
-                <span>Trending Search Suggestions</span>
-                <span className="text-indigo-600 font-semibold font-mono">Realtime Stream</span>
+                <span>Trending Live Intelligence</span>
+                <span className="text-indigo-600 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Claude 3.5 Ready
+                </span>
               </div>
               <div className="space-y-1">
                 {SUGGESTED_QUERIES.map((q) => (
                   <div
                     key={q}
                     onClick={() => handleSelectSuggested(q)}
-                    className="px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer flex items-center justify-between transition-colors"
+                    className="px-2.5 py-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors cursor-pointer flex items-center justify-between group"
                   >
                     <span>{q}</span>
-                    <ArrowRight className="w-3 h-3 text-slate-400" />
+                    <ArrowRight className="w-3 h-3 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 ))}
               </div>
@@ -158,6 +169,29 @@ export const SearchHeader: React.FC = () => {
 
         {/* Global Action Buttons */}
         <div className="flex items-center gap-2">
+          {/* Live Feed Sync Button */}
+          <button
+            type="button"
+            onClick={() => refreshLiveFeeds(true)}
+            disabled={isSyncingFeeds}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 shadow-xs ${
+              isSyncingFeeds
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                : 'bg-white border-slate-200/90 text-slate-700 hover:border-indigo-300 hover:text-indigo-600'
+            }`}
+            title="Fetch latest articles from TechCrunch, Hacker News, The Verge & Ars Technica"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isSyncingFeeds ? 'animate-spin' : ''}`} />
+            <span className="hidden md:inline">
+              {isSyncingFeeds ? 'Syncing...' : 'Sync Feeds'}
+            </span>
+            {lastFeedSyncTime && (
+              <span className="hidden xl:inline text-[10px] text-slate-400 font-mono pl-1">
+                {lastFeedSyncTime}
+              </span>
+            )}
+          </button>
+
           {/* Save Search Button */}
           <button
             type="button"
@@ -244,36 +278,52 @@ export const SearchHeader: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Chips Horizontal Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <div className="flex items-center gap-1.5 shrink-0 text-slate-400 text-xs font-semibold mr-1">
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          <span className="text-[11px] uppercase tracking-wider">Filters:</span>
+      {/* Filter Chips Horizontal Bar with Live Status indicator */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex items-center gap-1.5 shrink-0 text-slate-400 text-xs font-semibold mr-1">
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span className="text-[11px] uppercase tracking-wider">Filters:</span>
+          </div>
+
+          {FILTER_CHIPS.map((chip) => {
+            const isActive = activeFilterChip === chip;
+            return (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => {
+                  setActiveFilterChip(chip);
+                  showToast(`Filter applied: ${chip}`);
+                }}
+                className={`
+                  shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-150 flex items-center gap-1
+                  ${isActive
+                    ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                    : 'bg-white border border-slate-200/90 text-slate-600 hover:border-indigo-300 hover:text-slate-900'
+                  }
+                `}
+              >
+                <span>{chip}</span>
+                {chip === 'More Filters' && <ChevronDown className="w-3 h-3 text-slate-400" />}
+              </button>
+            );
+          })}
         </div>
 
-        {FILTER_CHIPS.map((chip) => {
-          const isActive = activeFilterChip === chip;
-          return (
-            <button
-              key={chip}
-              type="button"
-              onClick={() => {
-                setActiveFilterChip(chip);
-                showToast(`Filter applied: ${chip}`);
-              }}
-              className={`
-                shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-150 flex items-center gap-1
-                ${isActive
-                  ? 'bg-indigo-600 text-white font-semibold shadow-xs'
-                  : 'bg-white border border-slate-200/90 text-slate-600 hover:border-indigo-300 hover:text-slate-900'
-                }
-              `}
-            >
-              <span>{chip}</span>
-              {chip === 'More Filters' && <ChevronDown className="w-3 h-3 text-slate-400" />}
-            </button>
-          );
-        })}
+        {/* Live Status indicator */}
+        <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-500 shrink-0 font-medium">
+          <span className="relative flex h-2 w-2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isBackendOnline ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+          </span>
+          <span className="text-emerald-700 font-semibold">Live Feeds Active</span>
+          <span className="text-slate-300">|</span>
+          <span className="text-indigo-600 font-semibold flex items-center gap-1">
+            <Radio className="w-3 h-3 text-indigo-500" />
+            Claude 3.5 Ready
+          </span>
+        </div>
       </div>
     </header>
   );

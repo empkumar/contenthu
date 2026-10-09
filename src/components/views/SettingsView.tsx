@@ -7,10 +7,13 @@ import {
   Palette, 
   CreditCard, 
   Zap, 
-  Check, 
   Plus, 
   Layers, 
-  Save
+  Save,
+  Server,
+  RefreshCw,
+  Radio,
+  KeyRound
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { TOPIC_NODES } from '../../data/mockData';
@@ -23,10 +26,15 @@ export const SettingsView: React.FC = () => {
     updateUserPreferences,
     followedTopicIds,
     toggleFollowTopic,
+    refreshLiveFeeds,
+    isSyncingFeeds,
+    lastFeedSyncTime,
+    isBackendOnline,
+    backendHealth,
     showToast
   } = useApp();
 
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'profile' | 'interests' | 'reading' | 'notifications' | 'display' | 'subscription'>('profile');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'profile' | 'interests' | 'reading' | 'notifications' | 'display' | 'subscription' | 'backend'>('profile');
 
   // Local Profile Form State
   const [name, setName] = useState(userProfile.name);
@@ -45,7 +53,7 @@ export const SettingsView: React.FC = () => {
   const [emailDailyDigest, setEmailDailyDigest] = useState(userPreferences.emailDailyDigest);
   const [highImpactAlerts, setHighImpactAlerts] = useState(userPreferences.highImpactAlerts);
   const [weeklyRoundup, setWeeklyRoundup] = useState(userPreferences.weeklyRoundup);
-  const [webhookUrl, setWebhookUrl] = useState(userPreferences.webhookUrl);
+  const [webhookUrl, setWebhookUrl] = useState(userPreferences.webhookUrl || '');
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,12 +97,13 @@ export const SettingsView: React.FC = () => {
   };
 
   const settingsTabs = [
-    { id: 'profile', label: 'User Profile', icon: User },
-    { id: 'interests', label: 'Followed Interests', icon: Layers },
-    { id: 'reading', label: 'Reading Preferences', icon: Sliders },
-    { id: 'notifications', label: 'Notifications & Webhooks', icon: Bell },
-    { id: 'display', label: 'Display & Density', icon: Palette },
-    { id: 'subscription', label: 'Plan & Compute Quotas', icon: CreditCard }
+    { id: 'profile' as const, label: 'User Profile', icon: User },
+    { id: 'backend' as const, label: 'Backend & Claude AI', icon: Server },
+    { id: 'interests' as const, label: 'Followed Interests', icon: Layers },
+    { id: 'reading' as const, label: 'Reading Preferences', icon: Sliders },
+    { id: 'notifications' as const, label: 'Notifications & Webhooks', icon: Bell },
+    { id: 'display' as const, label: 'Display & Density', icon: Palette },
+    { id: 'subscription' as const, label: 'Plan & Compute Quotas', icon: CreditCard }
   ];
 
   return (
@@ -107,7 +116,7 @@ export const SettingsView: React.FC = () => {
             <span>Workspace & Account Settings</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Manage your personal profile, synthesis parameters, followed topics, notifications, and subscription quotas.
+            Manage your personal profile, Anthropic Claude AI integration, RSS feeds, synthesis parameters, and quotas.
           </p>
         </div>
       </div>
@@ -122,32 +131,38 @@ export const SettingsView: React.FC = () => {
             return (
               <button
                 key={t.id}
-                onClick={() => setActiveSettingsTab(t.id as any)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left ${
+                onClick={() => setActiveSettingsTab(t.id)}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   isActive
-                    ? 'bg-slate-900 text-white shadow-xs'
+                    ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
+                <Icon className="w-4 h-4 shrink-0" />
                 <span>{t.label}</span>
+                {t.id === 'backend' && (
+                  <span className={`ml-auto w-2 h-2 rounded-full ${isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`} />
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* Right Column: Settings Panel (8 Cols) */}
-        <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
-          {/* TAB 1: PROFILE */}
+        {/* Right Column: Active Tab Content (8 Cols) */}
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs">
+          {/* TAB 1: USER PROFILE */}
           {activeSettingsTab === 'profile' && (
             <form onSubmit={handleProfileSubmit} className="space-y-5">
               <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white font-bold text-lg flex items-center justify-center shadow-md">
                   {userProfile.avatarInitials}
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">{userProfile.name}</h3>
-                  <span className="text-xs text-slate-500">{userProfile.role} • {userProfile.organization}</span>
+                  <h3 className="text-sm font-bold text-slate-900">{userProfile.name}</h3>
+                  <p className="text-xs text-slate-500">{userProfile.role} at {userProfile.organization}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    Pro Plan • Enterprise Tier
+                  </span>
                 </div>
               </div>
 
@@ -159,21 +174,23 @@ export const SettingsView: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Work Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Job Title / Role</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Role / Title</label>
                   <input
                     type="text"
                     value={role}
@@ -183,7 +200,7 @@ export const SettingsView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Organization</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Organization / Firm</label>
                   <input
                     type="text"
                     value={org}
@@ -194,16 +211,56 @@ export const SettingsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Bio & Research Statement</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Bio / Research Focus Summary</label>
                 <textarea
-                  rows={3}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                  rows={3}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
-              <div className="flex justify-end pt-2">
+              {/* Research Focus Tags */}
+              <div className="space-y-2 pt-2">
+                <label className="block text-xs font-bold text-slate-700">Custom Research Focus Tags</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {userProfile.researchFocus.map((t) => (
+                    <span
+                      key={t}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5"
+                    >
+                      <span>{t}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFocusTag(t)}
+                        className="text-indigo-400 hover:text-indigo-700"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    placeholder="Add focus tag (e.g. Indic Voice Models)..."
+                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddFocusTag}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-3 border-t border-slate-100">
                 <button
                   type="submit"
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors"
@@ -215,95 +272,201 @@ export const SettingsView: React.FC = () => {
             </form>
           )}
 
-          {/* TAB 2: FOLLOWED INTERESTS */}
-          {activeSettingsTab === 'interests' && (
-            <div className="space-y-5">
+          {/* TAB 2: BACKEND & CLAUDE AI INTEGRATIONS */}
+          {activeSettingsTab === 'backend' && (
+            <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Custom Research Focus Tags</h3>
-                <p className="text-xs text-slate-500">Keywords used by ContentHu Core to tailor Discover recommendations.</p>
+                <h3 className="text-sm font-bold text-slate-900">Backend & Anthropic Claude AI Engine</h3>
+                <p className="text-xs text-slate-500">Live health diagnostic, Serverless API endpoints, and RSS ingestion status.</p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Add custom keyword (e.g. Indic SLMs, GPU Kernel)..."
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddFocusTag(); } }}
-                  className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                />
-                <button
-                  onClick={handleAddFocusTag}
-                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Tag</span>
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2 pt-1">
-                {userProfile.researchFocus.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold flex items-center gap-2"
-                  >
-                    <span>{tag}</span>
-                    <button
-                      onClick={() => handleRemoveFocusTag(tag)}
-                      className="text-indigo-400 hover:text-indigo-800 font-bold"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 space-y-3">
-                <h3 className="text-sm font-bold text-slate-900">Followed Macro Clusters</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {TOPIC_NODES.map((node) => {
-                    const isFollowed = followedTopicIds.includes(node.id);
-                    return (
-                      <button
-                        key={node.id}
-                        type="button"
-                        onClick={() => toggleFollowTopic(node.id)}
-                        className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
-                          isFollowed
-                            ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 font-bold'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="truncate">{node.label}</span>
-                        {isFollowed ? <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" /> : <Plus className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
-                      </button>
-                    );
-                  })}
+              {/* Status Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Health Card */}
+                <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Serverless Gateway</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {isBackendOnline ? 'Online (Vercel Serverless)' : 'Active (Local Dev)'}
+                    </span>
+                  </div>
+                  <div className="text-base font-bold font-mono">
+                    ContentHu API {backendHealth?.version || 'v2.0'}
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Serverless TypeScript functions deployed directly on domain <strong className="text-white">contenthu.com/api</strong>.
+                  </p>
                 </div>
+
+                {/* Claude Card */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950 to-slate-900 text-white border border-indigo-900/60 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-300">AI Intelligence Engine</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-900/80 text-indigo-200 border border-indigo-700">
+                      Claude 3.5 Sonnet
+                    </span>
+                  </div>
+                  <div className="text-base font-bold font-mono text-indigo-100 flex items-center gap-1.5">
+                    <Radio className="w-4 h-4 text-indigo-400" />
+                    {backendHealth?.services?.aiEngine?.mode === 'live-api' ? 'Live API Key Connected' : 'Anthropic SDK Ready'}
+                  </div>
+                  <p className="text-[11px] text-indigo-200/80">
+                    Powers deep research synthesis, executive briefings, and SWOT analysis.
+                  </p>
+                </div>
+              </div>
+
+              {/* RSS Ingestion Feeds */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Radio className="w-4 h-4 text-emerald-600" />
+                    <h4 className="text-xs font-bold text-slate-900">Live Ingested Feed Sources (6 Active)</h4>
+                  </div>
+                  <button
+                    onClick={() => refreshLiveFeeds(true)}
+                    disabled={isSyncingFeeds}
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:text-indigo-600 hover:border-indigo-300 flex items-center gap-1 transition-colors"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isSyncingFeeds ? 'animate-spin text-indigo-600' : ''}`} />
+                    <span>{isSyncingFeeds ? 'Syncing...' : 'Sync Now'}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {[
+                    { name: 'TechCrunch AI & Tech', url: 'techcrunch.com/feed', cat: 'Venture & AI' },
+                    { name: 'The Verge Tech', url: 'theverge.com/rss', cat: 'Tech & Policy' },
+                    { name: 'Hacker News Frontpage', url: 'ycombinator.com/rss', cat: 'Startups & Infra' },
+                    { name: 'VentureBeat AI', url: 'venturebeat.com/ai', cat: 'Research' },
+                    { name: 'Ars Technica', url: 'arstechnica.com/rss', cat: 'Cybersecurity' },
+                    { name: 'Wired Business', url: 'wired.com/rss', cat: 'Macro Tech' }
+                  ].map((f) => (
+                    <div key={f.name} className="p-2.5 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-slate-800 block text-[11px]">{f.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{f.url}</span>
+                      </div>
+                      <span className="text-[9px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {f.cat}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {lastFeedSyncTime && (
+                  <div className="text-[10px] text-slate-500 font-mono flex items-center justify-between pt-1">
+                    <span>Last Ingestion Sync: {lastFeedSyncTime}</span>
+                    <span className="text-emerald-600 font-bold">Auto-polling every 5 mins</span>
+                  </div>
+                )}
+              </div>
+
+              {/* API Endpoints Catalog */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-800">Serverless REST Endpoints Catalog</h4>
+                <div className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100 overflow-hidden text-xs">
+                  {[
+                    { method: 'GET / POST', path: '/api/feeds', desc: 'Live RSS feeds ingestion & topic classification' },
+                    { method: 'GET', path: '/api/articles', desc: 'Search, category filter, topic sort & pagination' },
+                    { method: 'POST', path: '/api/research', desc: 'Claude 3.5 Sonnet deep research synthesis engine' },
+                    { method: 'POST', path: '/api/briefing', desc: 'Executive morning & weekly briefing generator' },
+                    { method: 'POST', path: '/api/summarize', desc: 'Article SWOT analysis & market impact breakdown' },
+                    { method: 'GET', path: '/api/companies', desc: 'Tracked companies correlated with live news mentions' },
+                    { method: 'GET', path: '/api/health', desc: 'Gateway diagnostic & service health status' }
+                  ].map((ep) => (
+                    <div key={ep.path} className="p-3 flex items-center justify-between gap-2 font-mono">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px] shrink-0">
+                          {ep.method}
+                        </span>
+                        <span className="font-bold text-slate-900 text-xs">{ep.path}</span>
+                      </div>
+                      <span className="text-slate-500 font-sans text-[11px] truncate">{ep.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Environment Variable Setup Guide */}
+              <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200/80 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-indigo-900 font-bold">
+                  <KeyRound className="w-4 h-4 text-indigo-600" />
+                  <span>Anthropic API Key Configuration</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[11.5px]">
+                  To connect your private Anthropic API key, add <code className="px-1.5 py-0.5 rounded bg-white font-mono text-indigo-700 border border-indigo-200">ANTHROPIC_API_KEY=sk-ant-...</code> in your Vercel Project Settings under <strong className="font-semibold text-slate-800">Environment Variables</strong> or in a local <code className="px-1.5 py-0.5 rounded bg-white font-mono text-indigo-700 border border-indigo-200">.env</code> file.
+                </p>
               </div>
             </div>
           )}
 
-          {/* TAB 3: READING PREFERENCES */}
+          {/* TAB 3: FOLLOWED INTERESTS */}
+          {activeSettingsTab === 'interests' && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Followed Intelligence Topics</h3>
+                <p className="text-xs text-slate-500">Toggle topics to prioritize in your discover feed and automated briefings.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {TOPIC_NODES.map((t) => {
+                  const isFollowed = followedTopicIds.includes(t.id);
+                  return (
+                    <div
+                      key={t.id}
+                      onClick={() => toggleFollowTopic(t.id)}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                        isFollowed
+                          ? 'bg-indigo-50/70 border-indigo-300 shadow-xs'
+                          : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-8 h-8 rounded-xl ${t.bgColor} ${t.borderColor} border flex items-center justify-center font-bold text-xs ${t.color}`}>
+                          {t.label.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-slate-900 block">{t.label}</span>
+                          <span className="text-[10px] text-slate-500">{t.statLabel}</span>
+                        </div>
+                      </div>
+
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        isFollowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {isFollowed ? 'Following' : '+ Follow'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: READING PREFERENCES */}
           {activeSettingsTab === 'reading' && (
             <div className="space-y-5">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Synthesis & Reader Customization</h3>
-                <p className="text-xs text-slate-500">Configure default AI model synthesis density and citation outputs.</p>
+                <h3 className="text-sm font-bold text-slate-900">Reading & Synthesis Preferences</h3>
+                <p className="text-xs text-slate-500">Customize how intelligence dossiers and summaries are formatted.</p>
               </div>
 
               <div className="space-y-4">
+                {/* Summary Length */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">AI Summary Output Length</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Default Summary Density</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['Concise', 'Balanced', 'Comprehensive'] as const).map((len) => (
                       <button
                         key={len}
+                        type="button"
                         onClick={() => setSummaryLength(len)}
-                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
+                        className={`p-2.5 rounded-xl border text-xs font-semibold text-left transition-all ${
                           summaryLength === len
-                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-bold'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
                         {len}
@@ -312,46 +475,45 @@ export const SettingsView: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Default Citation */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Default Citation Style</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(['APA 7th', 'IEEE', 'Chicago', 'BibTeX'] as const).map((cit) => (
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Default Citation Format</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {(['APA 7th', 'IEEE', 'Chicago', 'BibTeX'] as const).map((c) => (
                       <button
-                        key={cit}
-                        onClick={() => setDefaultCitation(cit)}
-                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                          defaultCitation === cit
-                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-bold'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        key={c}
+                        type="button"
+                        onClick={() => setDefaultCitation(c)}
+                        className={`py-2 px-2 text-center rounded-xl border text-xs font-semibold transition-all ${
+                          defaultCitation === c
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        {cit}
+                        {c}
                       </button>
                     ))}
                   </div>
                 </div>
 
+                {/* Default Landing Page */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Default Landing Screen</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(['discover', 'ai-research', 'explore', 'monitor'] as const).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setDefaultLandingPage(page)}
-                        className={`py-2 px-3 rounded-xl text-xs font-semibold border capitalize transition-all ${
-                          defaultLandingPage === page
-                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 font-bold'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                        }`}
-                      >
-                        {page.replace('-', ' ')}
-                      </button>
-                    ))}
-                  </div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Default Workspace Landing View</label>
+                  <select
+                    value={defaultLandingPage}
+                    onChange={(e) => setDefaultLandingPage(e.target.value as any)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    <option value="discover">Discover Feed</option>
+                    <option value="explore">Explore Clusters</option>
+                    <option value="ai-research">AI Research Landscape</option>
+                    <option value="monitor">Company Radar Monitor</option>
+                    <option value="briefings">Executive Briefings Center</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-end pt-3 border-t border-slate-100">
                 <button
                   onClick={handleSavePreferences}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors"
@@ -363,7 +525,7 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: NOTIFICATIONS & WEBHOOKS */}
+          {/* TAB 5: NOTIFICATIONS & WEBHOOKS */}
           {activeSettingsTab === 'notifications' && (
             <div className="space-y-5">
               <div>
@@ -375,7 +537,7 @@ export const SettingsView: React.FC = () => {
                 <label className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
                   <div>
                     <span className="text-xs font-bold text-slate-800 block">Daily Morning Briefing Email</span>
-                    <span className="text-[11px] text-slate-500">Delivers executive intelligence digest to your inbox at 08:30 AM IST</span>
+                    <span className="text-[11px] text-slate-500">Delivers executive intelligence digest to your inbox at 08:30 AM</span>
                   </div>
                   <input
                     type="checkbox"
@@ -443,60 +605,54 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 5: DISPLAY */}
+          {/* TAB 6: DISPLAY */}
           {activeSettingsTab === 'display' && (
             <div className="space-y-5">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Display & Interface Theme</h3>
-                <p className="text-xs text-slate-500">Customize card density, layout spacing, and visual accent palette.</p>
+                <p className="text-xs text-slate-500">Control information density and visual accents.</p>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">Information Density</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setDensity('comfortable')}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        density === 'comfortable'
-                          ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span className="text-xs font-bold block">Comfortable View</span>
-                      <span className="text-[11px] text-slate-500">Spacious cards with rich takeaways and thumbnails.</span>
-                    </button>
-
-                    <button
-                      onClick={() => setDensity('compact')}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        density === 'compact'
-                          ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span className="text-xs font-bold block">Compact Grid</span>
-                      <span className="text-[11px] text-slate-500">High-density research list for rapid power-skimming.</span>
-                    </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'comfortable' as const, label: 'Comfortable' },
+                      { id: 'compact' as const, label: 'Compact' }
+                    ].map((d) => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => setDensity(d.id)}
+                        className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                          density === d.id
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Visual Accent Theme</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Accent Color Palette</label>
+                  <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
                     {[
-                      { id: 'indigo-violet', label: 'Indigo / Violet', color: 'from-indigo-600 to-violet-600' },
-                      { id: 'emerald', label: 'Emerald Glow', color: 'from-emerald-500 to-teal-600' },
-                      { id: 'cyan', label: 'Cyber Cyan', color: 'from-cyan-500 to-blue-600' },
-                      { id: 'amber', label: 'Amber Horizon', color: 'from-amber-500 to-orange-600' }
+                      { id: 'Indigo (Default)', label: 'Indigo / Violet', color: 'from-indigo-600 to-violet-600' },
+                      { id: 'Emerald Teal', label: 'Emerald / Teal', color: 'from-emerald-600 to-teal-600' },
+                      { id: 'Cyan Sky', label: 'Cyan / Sky', color: 'from-cyan-600 to-blue-600' }
                     ].map((thm) => (
                       <button
                         key={thm.id}
+                        type="button"
                         onClick={() => setAccentTheme(thm.id as any)}
-                        className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all ${
+                        className={`p-2.5 rounded-xl border flex items-center gap-2 transition-all ${
                           accentTheme === thm.id
-                            ? 'bg-slate-50 border-indigo-500 text-slate-900 font-bold ring-2 ring-indigo-500/10'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                            ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-1 ring-indigo-500'
+                            : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
                         <div className={`w-3.5 h-3.5 rounded-full bg-gradient-to-r ${thm.color}`} />
@@ -519,7 +675,7 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 6: SUBSCRIPTION & PLAN */}
+          {/* TAB 7: SUBSCRIPTION & PLAN */}
           {activeSettingsTab === 'subscription' && (
             <div className="space-y-6">
               {/* Pro Plan Card */}
@@ -543,7 +699,7 @@ export const SettingsView: React.FC = () => {
                 {/* Quota Progress */}
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between text-xs text-indigo-200 font-mono">
-                    <span>Deep Multi-Agent Synthesis Quota</span>
+                    <span>Claude 3.5 Sonnet Synthesis Quota</span>
                     <strong>168 / 200 Queries Used (84%)</strong>
                   </div>
                   <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
@@ -553,12 +709,12 @@ export const SettingsView: React.FC = () => {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs text-indigo-100">
                   <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                    <span className="text-slate-400 block font-mono text-[10px]">CRAWLER NODES</span>
-                    <span className="font-bold text-white">64 Dedicated</span>
+                    <span className="text-slate-400 block font-mono text-[10px]">RSS INGESTION</span>
+                    <span className="font-bold text-white">6 Live Feeds</span>
                   </div>
                   <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                    <span className="text-slate-400 block font-mono text-[10px]">INDIAAI GPU ACCESS</span>
-                    <span className="font-bold text-emerald-300">Connected</span>
+                    <span className="text-slate-400 block font-mono text-[10px]">AI MODEL</span>
+                    <span className="font-bold text-emerald-300">Claude 3.5 Sonnet</span>
                   </div>
                   <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
                     <span className="text-slate-400 block font-mono text-[10px]">API EXPORTS</span>
