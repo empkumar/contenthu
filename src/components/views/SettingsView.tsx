@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { 
   Settings as SettingsIcon, 
-  User, 
   Sliders, 
   Bell, 
   Palette, 
-  CreditCard, 
-  Zap, 
-  Plus, 
   Layers, 
   Save,
   Server,
@@ -20,8 +16,6 @@ import { TOPIC_NODES } from '../../data/mockData';
 
 export const SettingsView: React.FC = () => {
   const {
-    userProfile,
-    updateUserProfile,
     userPreferences,
     updateUserPreferences,
     followedTopicIds,
@@ -34,15 +28,7 @@ export const SettingsView: React.FC = () => {
     showToast
   } = useApp();
 
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'profile' | 'interests' | 'reading' | 'notifications' | 'display' | 'subscription' | 'backend'>('profile');
-
-  // Local Profile Form State
-  const [name, setName] = useState(userProfile.name);
-  const [email, setEmail] = useState(userProfile.email);
-  const [role, setRole] = useState(userProfile.role);
-  const [org, setOrg] = useState(userProfile.organization);
-  const [bio, setBio] = useState(userProfile.bio);
-  const [newTag, setNewTag] = useState('');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'backend' | 'interests' | 'reading' | 'notifications' | 'display'>('backend');
 
   // Local Preferences State
   const [summaryLength, setSummaryLength] = useState(userPreferences.summaryLength);
@@ -54,33 +40,6 @@ export const SettingsView: React.FC = () => {
   const [highImpactAlerts, setHighImpactAlerts] = useState(userPreferences.highImpactAlerts);
   const [weeklyRoundup, setWeeklyRoundup] = useState(userPreferences.weeklyRoundup);
   const [webhookUrl, setWebhookUrl] = useState(userPreferences.webhookUrl || '');
-
-  const handleProfileSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateUserProfile({
-      name,
-      email,
-      role,
-      organization: org,
-      bio,
-      avatarInitials: name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'AM'
-    });
-  };
-
-  const handleAddFocusTag = () => {
-    if (newTag.trim() && !userProfile.researchFocus.includes(newTag.trim())) {
-      updateUserProfile({
-        researchFocus: [...userProfile.researchFocus, newTag.trim()]
-      });
-      setNewTag('');
-    }
-  };
-
-  const handleRemoveFocusTag = (tagToRemove: string) => {
-    updateUserProfile({
-      researchFocus: userProfile.researchFocus.filter(t => t !== tagToRemove)
-    });
-  };
 
   const handleSavePreferences = () => {
     updateUserPreferences({
@@ -97,13 +56,11 @@ export const SettingsView: React.FC = () => {
   };
 
   const settingsTabs = [
-    { id: 'profile' as const, label: 'User Profile', icon: User },
     { id: 'backend' as const, label: 'Backend & Claude AI', icon: Server },
     { id: 'interests' as const, label: 'Followed Interests', icon: Layers },
     { id: 'reading' as const, label: 'Reading Preferences', icon: Sliders },
     { id: 'notifications' as const, label: 'Notifications & Webhooks', icon: Bell },
-    { id: 'display' as const, label: 'Display & Density', icon: Palette },
-    { id: 'subscription' as const, label: 'Plan & Compute Quotas', icon: CreditCard }
+    { id: 'display' as const, label: 'Display & Density', icon: Palette }
   ];
 
   return (
@@ -113,10 +70,10 @@ export const SettingsView: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <SettingsIcon className="w-6 h-6 text-indigo-600" />
-            <span>Workspace & Account Settings</span>
+            <span>Workspace Settings & Integrations</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Manage your personal profile, Anthropic Claude AI integration, RSS feeds, synthesis parameters, and quotas.
+            Configure Anthropic Claude AI integration, RSS live feeds, synthesis parameters, and notifications.
           </p>
         </div>
       </div>
@@ -141,7 +98,7 @@ export const SettingsView: React.FC = () => {
                 <Icon className="w-4 h-4 shrink-0" />
                 <span>{t.label}</span>
                 {t.id === 'backend' && (
-                  <span className={`ml-auto w-2 h-2 rounded-full ${isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`} />
+                  <span className={`ml-auto w-2 h-2 rounded-full ${isBackendOnline ? 'bg-emerald-400' : 'bg-emerald-400'} animate-pulse`} />
                 )}
               </button>
             );
@@ -150,129 +107,7 @@ export const SettingsView: React.FC = () => {
 
         {/* Right Column: Active Tab Content (8 Cols) */}
         <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs">
-          {/* TAB 1: USER PROFILE */}
-          {activeSettingsTab === 'profile' && (
-            <form onSubmit={handleProfileSubmit} className="space-y-5">
-              <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white font-bold text-lg flex items-center justify-center shadow-md">
-                  {userProfile.avatarInitials}
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">{userProfile.name}</h3>
-                  <p className="text-xs text-slate-500">{userProfile.role} at {userProfile.organization}</p>
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    Pro Plan • Enterprise Tier
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Work Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Role / Title</label>
-                  <input
-                    type="text"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Organization / Firm</label>
-                  <input
-                    type="text"
-                    value={org}
-                    onChange={(e) => setOrg(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Bio / Research Focus Summary</label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  rows={3}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
-
-              {/* Research Focus Tags */}
-              <div className="space-y-2 pt-2">
-                <label className="block text-xs font-bold text-slate-700">Custom Research Focus Tags</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {userProfile.researchFocus.map((t) => (
-                    <span
-                      key={t}
-                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5"
-                    >
-                      <span>{t}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFocusTag(t)}
-                        className="text-indigo-400 hover:text-indigo-700"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <input
-                    type="text"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="Add focus tag (e.g. Indic Voice Models)..."
-                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddFocusTag}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-3 border-t border-slate-100">
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Save Profile</span>
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* TAB 2: BACKEND & CLAUDE AI INTEGRATIONS */}
+          {/* TAB 1: BACKEND & CLAUDE AI INTEGRATIONS */}
           {activeSettingsTab === 'backend' && (
             <div className="space-y-6">
               <div>
@@ -337,9 +172,9 @@ export const SettingsView: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {[
                     { name: 'TechCrunch AI & Tech', url: 'techcrunch.com/feed', cat: 'Venture & AI' },
+                    { name: 'MIT Technology Review', url: 'technologyreview.com/feed', cat: 'Research' },
                     { name: 'The Verge Tech', url: 'theverge.com/rss', cat: 'Tech & Policy' },
-                    { name: 'Hacker News Frontpage', url: 'ycombinator.com/rss', cat: 'Startups & Infra' },
-                    { name: 'VentureBeat AI', url: 'venturebeat.com/ai', cat: 'Research' },
+                    { name: 'Hacker News Frontpage', url: 'hnrss.org/frontpage', cat: 'Startups & Infra' },
                     { name: 'Ars Technica', url: 'arstechnica.com/rss', cat: 'Cybersecurity' },
                     { name: 'Wired Business', url: 'wired.com/rss', cat: 'Macro Tech' }
                   ].map((f) => (
@@ -402,7 +237,7 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 3: FOLLOWED INTERESTS */}
+          {/* TAB 2: FOLLOWED INTERESTS */}
           {activeSettingsTab === 'interests' && (
             <div className="space-y-5">
               <div>
@@ -445,7 +280,7 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: READING PREFERENCES */}
+          {/* TAB 3: READING PREFERENCES */}
           {activeSettingsTab === 'reading' && (
             <div className="space-y-5">
               <div>
@@ -525,7 +360,7 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 5: NOTIFICATIONS & WEBHOOKS */}
+          {/* TAB 4: NOTIFICATIONS & WEBHOOKS */}
           {activeSettingsTab === 'notifications' && (
             <div className="space-y-5">
               <div>
@@ -605,7 +440,7 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 6: DISPLAY */}
+          {/* TAB 5: DISPLAY */}
           {activeSettingsTab === 'display' && (
             <div className="space-y-5">
               <div>
@@ -671,79 +506,6 @@ export const SettingsView: React.FC = () => {
                   <Save className="w-3.5 h-3.5" />
                   <span>Apply Display Settings</span>
                 </button>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 7: SUBSCRIPTION & PLAN */}
-          {activeSettingsTab === 'subscription' && (
-            <div className="space-y-6">
-              {/* Pro Plan Card */}
-              <div className="p-6 rounded-3xl bg-gradient-to-br from-[#0B1120] via-indigo-950 to-[#1E1B4B] text-white space-y-4 border border-indigo-500/30 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-amber-400/20 text-amber-400">
-                      <Zap className="w-5 h-5 fill-amber-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white">ContentHu Pro Enterprise Plan</h3>
-                      <span className="text-xs text-indigo-300">Active • Renews Nov 01, 2026</span>
-                    </div>
-                  </div>
-
-                  <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
-                    Active Subscription
-                  </span>
-                </div>
-
-                {/* Quota Progress */}
-                <div className="space-y-2 pt-2">
-                  <div className="flex items-center justify-between text-xs text-indigo-200 font-mono">
-                    <span>Claude 3.5 Sonnet Synthesis Quota</span>
-                    <strong>168 / 200 Queries Used (84%)</strong>
-                  </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                    <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-400 h-full rounded-full w-[84%]" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs text-indigo-100">
-                  <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                    <span className="text-slate-400 block font-mono text-[10px]">RSS INGESTION</span>
-                    <span className="font-bold text-white">6 Live Feeds</span>
-                  </div>
-                  <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                    <span className="text-slate-400 block font-mono text-[10px]">AI MODEL</span>
-                    <span className="font-bold text-emerald-300">Claude 3.5 Sonnet</span>
-                  </div>
-                  <div className="p-2.5 bg-white/5 rounded-xl border border-white/10">
-                    <span className="text-slate-400 block font-mono text-[10px]">API EXPORTS</span>
-                    <span className="font-bold text-white">Unlimited</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Invoices Table */}
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Recent Billing Invoices
-                </h4>
-                <div className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100 overflow-hidden text-xs">
-                  <div className="p-3.5 flex items-center justify-between font-mono">
-                    <div>
-                      <span className="font-bold text-slate-900 block">Invoice #INV-2026-10</span>
-                      <span className="text-slate-400 text-[11px]">Oct 01, 2026 • Pro Annual</span>
-                    </div>
-                    <span className="text-emerald-600 font-bold">$49.00 Paid</span>
-                  </div>
-                  <div className="p-3.5 flex items-center justify-between font-mono">
-                    <div>
-                      <span className="font-bold text-slate-900 block">Invoice #INV-2026-09</span>
-                      <span className="text-slate-400 text-[11px]">Sep 01, 2026 • Pro Annual</span>
-                    </div>
-                    <span className="text-emerald-600 font-bold">$49.00 Paid</span>
-                  </div>
-                </div>
               </div>
             </div>
           )}

@@ -9,11 +9,9 @@ import {
   Search, 
   Eye, 
   Layers, 
-  Zap, 
-  ChevronRight, 
-  MoreVertical, 
   X,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Radio
 } from 'lucide-react';
 import { useApp, type ActiveTab } from '../context/AppContext';
 
@@ -28,14 +26,14 @@ export const Sidebar: React.FC = () => {
     collections,
     savedSearches,
     watchlists,
-    userProfile
+    isBackendOnline
   } = useApp();
 
   const mainNav = [
     { id: 'discover' as ActiveTab, label: 'Discover', icon: Compass },
-    { id: 'explore' as ActiveTab, label: 'Explore', icon: Globe },
-    { id: 'ai-research' as ActiveTab, label: 'AI Research', icon: Sparkles, badge: 'PRO', isHighlight: true },
-    { id: 'monitor' as ActiveTab, label: 'Monitor', icon: Activity },
+    { id: 'explore' as ActiveTab, label: 'Explore Clusters', icon: Globe },
+    { id: 'ai-research' as ActiveTab, label: 'AI Research', icon: Sparkles },
+    { id: 'monitor' as ActiveTab, label: 'Market Monitor', icon: Activity },
     { id: 'library' as ActiveTab, label: 'My Library', icon: Bookmark, count: `${bookmarkedIds.size}` },
     { id: 'briefings' as ActiveTab, label: 'Briefings', icon: FileText, count: `${briefings.length}` },
   ];
@@ -70,8 +68,8 @@ export const Sidebar: React.FC = () => {
         ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Top Header & Logo */}
-        <div className="flex flex-col">
-          <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800/60">
+        <div className="flex flex-col flex-1 min-h-0">
+          <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800/60 shrink-0">
             <div 
               onClick={() => handleNavClick('discover')}
               className="flex items-center gap-2.5 cursor-pointer group"
@@ -99,8 +97,8 @@ export const Sidebar: React.FC = () => {
             )}
           </div>
 
-          {/* Nav list */}
-          <div className="px-3 py-4 space-y-5 overflow-y-auto max-h-[calc(100vh-270px)]">
+          {/* Nav list with smooth scroll */}
+          <div className="px-3 py-4 space-y-5 overflow-y-auto flex-1 scrollbar-thin">
             {/* Primary Nav */}
             <div>
               <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -126,11 +124,6 @@ export const Sidebar: React.FC = () => {
                         <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-indigo-400'}`} />
                         <span>{item.label}</span>
                       </div>
-                      {item.badge && (
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20 text-white' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'}`}>
-                          {item.badge}
-                        </span>
-                      )}
                       {item.count && (
                         <span className="text-[11px] text-slate-400 font-mono">
                           {item.count}
@@ -174,7 +167,7 @@ export const Sidebar: React.FC = () => {
                   );
                 })}
 
-                {/* Settings Link in Workspace */}
+                {/* Settings Link */}
                 <button
                   onClick={() => handleNavClick('settings')}
                   className={`
@@ -195,57 +188,20 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Bottom Section: Pro Upgrade & User Profile */}
-        <div className="p-3 space-y-3 border-t border-slate-800/80 bg-[#0A0F1D]">
-          {/* Upgrade Card */}
-          <div className="relative overflow-hidden rounded-xl p-3 bg-gradient-to-b from-indigo-950/60 to-slate-900 border border-indigo-500/30 shadow-inner">
-            <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                <span className="text-[11px] font-bold text-white tracking-wide">PRO PLAN</span>
-              </div>
-              <span className="text-[10px] font-mono text-indigo-300">84% used</span>
+        {/* Clean, Minimal Footer */}
+        <div className="p-3 border-t border-slate-800/80 bg-[#0A0F1D] shrink-0">
+          <div className="px-2 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isBackendOnline ? 'bg-emerald-400' : 'bg-emerald-400'}`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isBackendOnline ? 'bg-emerald-500' : 'bg-emerald-500'}`}></span>
+              </span>
+              <span className="text-[11px] font-medium text-slate-300">Live Ingestion</span>
             </div>
-            <p className="text-[11px] text-slate-400 leading-tight mb-2.5">
-              Unlimited multi-agent synthesis & deep web research.
-            </p>
-            <div className="w-full bg-slate-800 rounded-full h-1.5 mb-2.5 overflow-hidden">
-              <div className="bg-gradient-to-r from-indigo-500 to-violet-500 h-full rounded-full w-[84%]" />
-            </div>
-            <button 
-              onClick={() => handleNavClick('settings')}
-              className="w-full py-1.5 px-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-lg text-[11px] font-semibold shadow-md shadow-indigo-900/40 transition-all flex items-center justify-center gap-1"
-            >
-              <span>Manage Quotas</span>
-              <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* User Profile item */}
-          <div 
-            onClick={() => handleNavClick('settings')}
-            className={`flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/60 transition-colors cursor-pointer group ${
-              activeTab === 'settings' ? 'bg-slate-800/80' : ''
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 text-white flex items-center justify-center font-bold text-xs shadow">
-                  {userProfile.avatarInitials}
-                </div>
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0B1120] rounded-full" />
-              </div>
-              <div className="flex flex-col text-left">
-                <span className="text-[12px] font-semibold text-white leading-tight group-hover:text-indigo-300 transition-colors truncate max-w-[100px]">
-                  {userProfile.name}
-                </span>
-                <span className="text-[10px] text-slate-400 leading-tight truncate max-w-[100px]">
-                  {userProfile.role}
-                </span>
-              </div>
-            </div>
-            <MoreVertical className="w-3.5 h-3.5 text-slate-400 group-hover:text-white" />
+            <span className="text-[10px] font-mono text-indigo-300 font-semibold flex items-center gap-1">
+              <Radio className="w-3 h-3 text-indigo-400" />
+              v2.0
+            </span>
           </div>
         </div>
       </aside>
